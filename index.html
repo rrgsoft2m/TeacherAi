@@ -1,0 +1,88 @@
+
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+    <title>O'qituvchi AI - Ta'lim Yordamchisi</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- PPTX and DOCX Libraries -->
+    <script src="https://cdn.jsdelivr.net/gh/gitbrent/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
+    <script src="https://unpkg.com/docx@8.5.0/build/index.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #f9fbff;
+            color: #1a202c;
+            scroll-behavior: smooth;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .main-card {
+            background: #ffffff;
+            border-radius: 40px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.03);
+        }
+        @media (max-width: 640px) {
+            .main-card {
+                border-radius: 24px;
+            }
+        }
+        .btn-blue {
+            background: #4F8AFA;
+            color: white;
+            transition: all 0.3s ease;
+        }
+        .btn-blue:hover {
+            background: #3b74e6;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(79, 138, 250, 0.4);
+        }
+        .glass-input {
+            background: #f4f7fa;
+            border: 2px solid transparent;
+            transition: all 0.2s;
+        }
+        .glass-input:focus {
+            background: #ffffff;
+            border-color: #4F8AFA;
+            box-shadow: 0 0 0 4px rgba(79, 138, 250, 0.1);
+        }
+        @keyframes rotate-brain {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .brain-loader {
+            width: 80px;
+            height: 80px;
+            border: 4px solid #f1f5f9;
+            border-top-color: #4F8AFA;
+            border-radius: 50%;
+            animation: rotate-brain 1s linear infinite;
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+        .animate-shake { animation: shake 0.2s ease-in-out infinite; animation-iteration-count: 2; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@^19.2.3",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "@google/genai": "https://esm.sh/@google/genai@^1.37.0"
+  }
+}
+</script>
+</head>
+<body>
+    <div id="root"></div>
+</body>
+</html>
