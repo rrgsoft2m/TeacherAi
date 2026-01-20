@@ -1,8 +1,5 @@
 {
   "name": "O'zR Maktabgacha va Maktab Ta'limi Vazirligi - O'qituvchi AI",
   "description": "Maktabgacha va Maktab Ta'limi Vazirligi o'qituvchilari uchun sun'iy intellekt asosida dars ishlanmalari platformasi.",
-  "requestFramePermissions": [
-    "camera",
-    "microphone"
-  ]
+  "requestFramePermissions": []
 }

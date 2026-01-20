@@ -8,13 +8,13 @@ declare const PptxGenJS: any;
 declare const docx: any;
 declare const saveAs: any;
 
-const Logo = ({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) => (
-  <div className={`flex flex-col items-center text-center ${size === 'lg' ? 'space-y-4 md:space-y-6' : 'space-y-2'}`}>
-    <div className={`${size === 'lg' ? 'w-20 h-20 md:w-24 md:h-24' : 'w-10 h-10 md:w-14 md:h-14'} flex items-center justify-center filter drop-shadow-xl`}>
+const Logo = ({ size = 'md', splash = false }: { size?: 'sm' | 'md' | 'lg', splash?: boolean }) => (
+  <div className={`flex flex-col items-center text-center ${size === 'lg' ? 'space-y-4' : 'space-y-2'}`}>
+    <div className={`${size === 'lg' ? 'w-24 h-24' : 'w-12 h-12'} flex items-center justify-center`}>
       <img src="https://buxedu.uz/static/images/logo.png" alt="Logo" className="w-full h-full object-contain" />
     </div>
-    <div className="max-w-[200px] md:max-w-xs">
-      <h1 className={`${size === 'lg' ? 'text-sm md:text-lg font-extrabold' : 'text-[8px] md:text-[10px] font-extrabold'} text-[#1e3a8a] uppercase tracking-tighter leading-tight`}>
+    <div className="max-w-[280px]">
+      <h1 className={`${size === 'lg' ? 'text-lg font-extrabold' : 'text-[10px] font-extrabold'} text-[#1e3a8a] uppercase tracking-tight leading-tight`}>
         MAKTABGACHA VA MAKTAB<br/>TA'LIMI VAZIRLIGI
       </h1>
     </div>
@@ -47,25 +47,37 @@ const App: React.FC = () => {
   const [showTestResults, setShowTestResults] = useState(false);
 
   useEffect(() => {
-    const savedSession = localStorage.getItem('teacher_ai_session');
-    if (savedSession) {
-      const parsedUser = JSON.parse(savedSession);
-      setUser(parsedUser);
-      loadHistory(parsedUser.email);
-      setView(View.Landing);
-    } else {
-      setView(View.Auth);
-    }
+    const timer = setTimeout(() => {
+      const savedSession = localStorage.getItem('teacher_ai_session');
+      if (savedSession) {
+        const parsedUser = JSON.parse(savedSession);
+        setUser(parsedUser);
+        loadHistory(parsedUser.email);
+        setView(View.Landing);
+      } else {
+        setView(View.Auth);
+      }
+    }, 2500); // 2.5 seconds splash
+    return () => clearTimeout(timer);
   }, []);
 
   const loadHistory = (email: string) => {
-    const saved = localStorage.getItem(`history_${email}`);
-    if (saved) setHistory(JSON.parse(saved));
-    else setHistory([]);
+    const key = `history_${email}`;
+    const saved = localStorage.getItem(key);
+    if (saved) {
+      setHistory(JSON.parse(saved));
+    } else {
+      setHistory([]);
+    }
   };
 
   const saveToHistory = (type: HistoryType, title: string, data: any) => {
-    if (!user) return;
+    const currentUserStr = localStorage.getItem('teacher_ai_session');
+    if (!currentUserStr) return;
+    
+    const currentUser = JSON.parse(currentUserStr);
+    const key = `history_${currentUser.email}`;
+    
     const newItem: HistoryItem = {
       id: Math.random().toString(36).substr(2, 9),
       type,
@@ -73,9 +85,12 @@ const App: React.FC = () => {
       title,
       data
     };
-    const updatedHistory = [newItem, ...history];
+    
+    const currentHistory = JSON.parse(localStorage.getItem(key) || '[]');
+    const updatedHistory = [newItem, ...currentHistory];
+    
     setHistory(updatedHistory);
-    localStorage.setItem(`history_${user.email}`, JSON.stringify(updatedHistory));
+    localStorage.setItem(key, JSON.stringify(updatedHistory));
   };
 
   const handleAuth = (e: React.FormEvent<HTMLFormElement>) => {
@@ -139,62 +154,6 @@ const App: React.FC = () => {
     pptx.writeFile({ fileName: `${currentLesson.topic}_Taqdimot.pptx` });
   };
 
-  const exportDOCX = async (mode: 'TEST' | 'QA') => {
-    if (!currentLesson) return;
-    const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } = docx;
-
-    const children = [
-      new Paragraph({ 
-        text: currentLesson.topic.toUpperCase(), 
-        heading: HeadingLevel.HEADING_1,
-        alignment: AlignmentType.CENTER,
-        spacing: { after: 200 }
-      }),
-      new Paragraph({ 
-        text: mode === 'TEST' ? "INTERAKTIV TESTLAR" : "SAVOL-JAVOBLAR", 
-        heading: HeadingLevel.HEADING_2,
-        alignment: AlignmentType.CENTER,
-        spacing: { after: 400 }
-      }),
-      new Paragraph({ 
-        children: [
-          new TextRun({ text: `Fan: ${currentLesson.subject} | Sinf: ${currentLesson.grade} | Til: ${currentLesson.language}`, bold: true, size: 24 })
-        ],
-        spacing: { after: 400 }
-      }),
-    ];
-
-    if (mode === 'TEST') {
-      currentLesson.tests.forEach((t, i) => {
-        children.push(new Paragraph({ 
-          children: [new TextRun({ text: `${i + 1}. ${t.question}`, bold: true, size: 26 })],
-          spacing: { before: 200, after: 100 }
-        }));
-        t.options.forEach((opt, oi) => {
-          children.push(new Paragraph({ text: `   ${String.fromCharCode(65+oi)}) ${opt}`, size: 24 }));
-        });
-        children.push(new Paragraph({ 
-          children: [
-            new TextRun({ text: `Javob: ${String.fromCharCode(65+t.correctIndex)}) ${t.options[t.correctIndex]}`, bold: true, color: '22c55e', size: 24 })
-          ],
-          spacing: { before: 100 }
-        }));
-      });
-    } else {
-      currentLesson.qa.forEach((q, i) => {
-        children.push(new Paragraph({ 
-          children: [new TextRun({ text: `${i + 1}. Savol: ${q.question}`, bold: true, size: 26 })],
-          spacing: { before: 200, after: 100 }
-        }));
-        children.push(new Paragraph({ text: `Javob: ${q.answer}`, size: 24 }));
-      });
-    }
-
-    const doc = new Document({ sections: [{ children }] });
-    const blob = await Packer.toBlob(doc);
-    saveAs(blob, `${currentLesson.topic}_${mode}.docx`);
-  };
-
   const handleGenerateImage = async () => {
     if (!imagePrompt) return;
     setIsGeneratingExtra(true);
@@ -217,24 +176,61 @@ const App: React.FC = () => {
     finally { setIsGeneratingExtra(false); }
   };
 
+  const calculateResults = () => {
+    if (!currentLesson) return { correct: 0, percent: 0 };
+    const correctCount = currentLesson.tests.reduce((acc, test, idx) => {
+      return acc + (userAnswers[idx] === test.correctIndex ? 1 : 0);
+    }, 0);
+    return {
+      correct: correctCount,
+      percent: Math.round((correctCount / currentLesson.tests.length) * 100)
+    };
+  };
+
   if (view === View.Loading) return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-white p-4">
-      <Logo size="lg" />
-      <div className="mt-12 brain-loader"></div>
-      <p className="mt-6 text-slate-400 font-bold uppercase tracking-widest text-xs">Ilova yuklanmoqda...</p>
+    <div className="min-h-screen flex flex-col items-center justify-center bg-white p-4 animate-in fade-in duration-700">
+      <div className="mb-20">
+        <Logo size="lg" />
+      </div>
+      <div className="dot-container">
+        <div className="dot"></div>
+        <div className="dot"></div>
+        <div className="dot"></div>
+      </div>
+      <div className="text-center">
+        <h3 className="text-xl font-bold text-slate-700 tracking-[0.2em] mb-2">YUKLANMOQDA...</h3>
+        <p className="text-slate-400 text-sm font-medium">O'qituvchi AI tizimi tayyorlanmoqda</p>
+      </div>
+    </div>
+  );
+
+  if (view === View.Generating) return (
+    <div className="min-h-screen flex flex-col items-center justify-center bg-[#f9fbff] p-4 animate-in fade-in duration-700">
+       <div className="circular-loader mb-12">
+          <div className="loader-ring"></div>
+          <svg className="brain-icon" viewBox="0 0 24 24">
+            <path d="M12,2C7.03,2,3,6.03,3,11c0,3.31,1.8,6.21,4.5,7.76c0.3,0.17,0.5,0.48,0.5,0.82v1.42c0,0.55,0.45,1,1,1h6c0.55,0,1-0.45,1-1v-1.42 c0-0.34,0.2-0.65,0.5-0.82C19.2,17.21,21,14.31,21,11C21,6.03,16.97,2,12,2z M15,16c-0.3,0-0.59,0.07-0.85,0.2 C13.31,16.63,12.69,16.85,12,16.85s-1.31-0.22-2.15-0.65C9.59,16.07,9.3,16,9,16c-1.1,0-2-0.9-2-2s0.9-2,2-2c0.3,0,0.59,0.07,0.85,0.2 c0.84,0.43,1.46,0.65,2.15,0.65s1.31-0.22,2.15-0.65c0.26-0.13,0.55-0.2,0.85-0.2c1.1,0,2,0.9,2,2S16.1,16,15,16z"/>
+          </svg>
+       </div>
+       <div className="text-center space-y-4 max-w-xl px-6">
+         <h2 className="text-3xl font-bold text-slate-800 tracking-tight">Materiallar generatsiya qilinmoqda</h2>
+         <p className="text-slate-500 font-medium leading-relaxed">
+           O'qituvchi AI siz uchun eng sara dars rejalarini, testlarni va kreativ rasmlarni tayyorlamoqda...
+         </p>
+       </div>
     </div>
   );
 
   if (view === View.Auth) return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-slate-50">
-      <div className="main-card w-full max-w-md p-6 md:p-10 border border-white shadow-2xl flex flex-col items-center">
+      <div className="main-card w-full max-w-md p-6 md:p-10 border border-white shadow-2xl flex flex-col items-center animate-in zoom-in duration-500">
         <Logo size="sm" />
         <h2 className="text-2xl font-black text-slate-800 mt-8 mb-6">{authMode === AuthMode.Login ? 'Xush kelibsiz!' : "Ro'yxatdan o'ting"}</h2>
         <form onSubmit={handleAuth} className="w-full space-y-4">
           {authMode === AuthMode.Register && <input name="name" type="text" placeholder="Ism Familiya" className="w-full glass-input rounded-xl py-4 px-6 font-bold" required />}
           <input name="email" type="email" placeholder="Email manzili" className="w-full glass-input rounded-xl py-4 px-6 font-bold" required />
           <input name="password" type="password" placeholder="Maxfiy parol" className="w-full glass-input rounded-xl py-4 px-6 font-bold" required />
-          {authError && <p className="text-red-500 text-xs font-bold text-center animate-shake">{authError}</p>}
+          {authError && <p className="text-red-500 text-xs font-black text-center animate-shake uppercase tracking-widest">{authError}</p>}
           <button type="submit" className="w-full btn-blue py-4 rounded-xl font-black uppercase shadow-xl transition-all active:scale-95">
             {authMode === AuthMode.Login ? 'Tizimga kirish' : "Ro'yxatdan o'tish"}
           </button>
@@ -264,7 +260,7 @@ const App: React.FC = () => {
             <button onClick={() => setView(View.Dashboard)} className={`px-4 md:px-6 py-2 rounded-full text-xs md:text-sm font-bold transition-all ${view === View.Dashboard ? 'bg-blue-600 text-white shadow-lg' : 'hover:bg-slate-50 text-slate-500'}`}>
                <span className="md:hidden">📁</span><span className="hidden md:inline">Tarix ({history.length})</span>
             </button>
-            <button onClick={() => { localStorage.removeItem('teacher_ai_session'); setView(View.Auth); }} className="w-10 h-10 flex items-center justify-center text-slate-300 hover:text-red-500 transition-colors text-xl">🚪</button>
+            <button onClick={() => { localStorage.removeItem('teacher_ai_session'); setUser(null); setView(View.Auth); }} className="w-10 h-10 flex items-center justify-center text-slate-300 hover:text-red-500 transition-colors text-xl">🚪</button>
           </div>
         </div>
       </header>
@@ -307,7 +303,7 @@ const App: React.FC = () => {
                   <div className="col-span-full py-20 text-center text-slate-300 font-black uppercase tracking-widest">Hozircha tarix bo'sh.</div>
                 ) : history.map(item => (
                   <div key={item.id} onClick={() => {
-                    if (item.type === 'LESSON') { setCurrentLesson(item.data); setView(View.Results); }
+                    if (item.type === 'LESSON') { setCurrentLesson(item.data); setView(View.Results); setActiveTab(ResultTab.Presentation); }
                     else if (item.type === 'IMAGE') { setGeneratedImage(item.data); setView(View.AiImage); }
                     else { setGeneratedPuzzle(item.data); setView(View.LogicGame); }
                   }} className="main-card p-6 cursor-pointer group border border-slate-100 hover:border-blue-400 transition-all hover:shadow-2xl">
@@ -379,7 +375,6 @@ const App: React.FC = () => {
                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Dars mavzusi</label>
                    <input value={formData.topic} onChange={e => setFormData({...formData, topic: e.target.value})} placeholder="Mavzuni to'liq yozing..." className="w-full glass-input rounded-[28px] py-6 px-10 font-bold text-xl" />
                 </div>
-                {/* Language Select */}
                 <div className="space-y-2">
                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Til tanlash</label>
                    <select value={formData.language} onChange={e => setFormData({...formData, language: e.target.value})} className="w-full glass-input rounded-2xl py-4 px-6 font-bold cursor-pointer">
@@ -388,7 +383,6 @@ const App: React.FC = () => {
                       <option value="Inglizcha">🇺🇸 Inglizcha</option>
                    </select>
                 </div>
-                {/* Goal Select */}
                 <div className="space-y-2">
                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Dars maqsadi</label>
                    <select value={formData.goal} onChange={e => setFormData({...formData, goal: e.target.value})} className="w-full glass-input rounded-2xl py-4 px-6 font-bold cursor-pointer">
@@ -413,16 +407,8 @@ const App: React.FC = () => {
           </div>
         )}
 
-        {view === View.Generating && (
-          <div className="flex flex-col items-center justify-center py-32 space-y-12">
-             <div className="brain-loader border-[8px]"></div>
-             <h2 className="text-4xl font-black text-slate-900">Materiallar tayyorlanmoqda...</h2>
-          </div>
-        )}
-
         {view === View.Results && currentLesson && (
           <div className="space-y-12 animate-in fade-in duration-700">
-             {/* Sticky Navigation */}
              <div className="sticky top-[84px] z-[90] py-4 bg-[#f9fbff]/80 backdrop-blur-md border-b border-slate-100">
                 <div className="max-w-7xl mx-auto flex justify-center px-2">
                    <div className="bg-white p-2 rounded-full shadow-2xl border-4 border-white flex space-x-1 md:space-x-2 overflow-x-auto no-scrollbar max-w-full">
@@ -465,26 +451,58 @@ const App: React.FC = () => {
                   <div className="space-y-12">
                      <div className="flex justify-between items-center flex-wrap gap-4 border-b pb-10">
                         <h2 className="text-3xl font-black">📝 Interaktiv Testlar</h2>
-                        <button onClick={() => exportDOCX('TEST')} className="bg-blue-600 text-white px-8 py-3.5 rounded-full font-black text-xs uppercase shadow-xl hover:bg-blue-700 transition-all flex items-center space-x-2">
-                          <span>📝</span><span>Word (.docx) yuklash</span>
-                        </button>
+                        {showTestResults && (
+                          <div className="flex items-center space-x-6 animate-in zoom-in">
+                            <div className="bg-blue-600 text-white px-6 py-3 rounded-2xl font-black shadow-lg">
+                              Natija: {calculateResults().correct} / {currentLesson.tests.length}
+                            </div>
+                            <div className="bg-green-500 text-white px-6 py-3 rounded-2xl font-black shadow-lg">
+                              {calculateResults().percent}% Muvaffaqiyat
+                            </div>
+                          </div>
+                        )}
                      </div>
+
+                     {showTestResults && (
+                        <div className="bg-blue-50/50 p-8 rounded-[40px] border-4 border-white shadow-inner mb-12 animate-in slide-in-from-top-4">
+                           <h3 className="text-xl font-black text-blue-900 mb-2 uppercase tracking-tight">Test yakunlandi!</h3>
+                           <p className="text-slate-600 font-medium">Siz {currentLesson.tests.length} ta savoldan {calculateResults().correct} tasiga to'g'ri javob berdingiz. Quyida savollarning tahlili va izohlari bilan tanishib chiqishingiz mumkin.</p>
+                        </div>
+                     )}
+
                      <div className="space-y-8">
                         {currentLesson.tests.map((q, i) => (
                           <div key={i} className={`p-8 md:p-12 rounded-[48px] border-4 transition-all ${showTestResults ? (userAnswers[i] === q.correctIndex ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200') : 'bg-white border-slate-50 shadow-xl'}`}>
-                             <h4 className="text-2xl font-black mb-10 leading-snug">{i+1}. {q.question}</h4>
+                             <div className="flex justify-between items-start mb-10">
+                                <h4 className="text-2xl font-black leading-snug flex-1">{i+1}. {q.question}</h4>
+                                {showTestResults && (
+                                  <span className={`ml-4 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ${userAnswers[i] === q.correctIndex ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}>
+                                    {userAnswers[i] === q.correctIndex ? 'To\'g\'ri' : 'Xato'}
+                                  </span>
+                                )}
+                             </div>
                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 {q.options.map((opt, oi) => (
-                                  <button key={oi} disabled={showTestResults} onClick={() => { const na = [...userAnswers]; na[i] = oi; setUserAnswers(na); }} className={`p-6 rounded-[32px] border-2 font-bold flex items-center space-x-4 transition-all ${userAnswers[i] === oi ? 'bg-blue-600 text-white border-blue-700' : 'bg-slate-50 border-transparent hover:bg-slate-100 text-slate-600'}`}>
-                                     <span className="w-12 h-12 rounded-2xl flex items-center justify-center font-black text-lg bg-white/20">{String.fromCharCode(65+oi)}</span>
+                                  <button key={oi} disabled={showTestResults} onClick={() => { const na = [...userAnswers]; na[i] = oi; setUserAnswers(na); }} className={`p-6 rounded-[32px] border-2 font-bold flex items-center space-x-4 transition-all ${
+                                    showTestResults 
+                                      ? (oi === q.correctIndex ? 'bg-green-500 text-white border-green-600 shadow-lg' : (userAnswers[i] === oi ? 'bg-red-500 text-white border-red-600 opacity-80' : 'bg-slate-50 border-transparent text-slate-300'))
+                                      : (userAnswers[i] === oi ? 'bg-blue-600 text-white border-blue-700' : 'bg-slate-50 border-transparent hover:bg-slate-100 text-slate-600')
+                                  }`}>
+                                     <span className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-lg ${showTestResults && (oi === q.correctIndex || userAnswers[i] === oi) ? 'bg-white/20' : 'bg-white/50 text-slate-400'}`}>{String.fromCharCode(65+oi)}</span>
                                      <span className="text-lg flex-1 text-left">{opt}</span>
                                   </button>
                                 ))}
                              </div>
+                             {showTestResults && (
+                               <div className="mt-8 p-6 bg-white/50 rounded-3xl border-2 border-slate-100 animate-in fade-in">
+                                 <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-2">AI Izohi:</p>
+                                 <p className="text-slate-700 font-bold italic leading-relaxed">"{q.explanation}"</p>
+                               </div>
+                             )}
                           </div>
                         ))}
                      </div>
-                     {!showTestResults && <button onClick={() => { if(userAnswers.includes(-1)) alert("Hamma savollarga javob bering!"); else setShowTestResults(true); }} className="w-full btn-blue py-6 rounded-[32px] font-black uppercase text-xl shadow-2xl">Tekshirish 🎯</button>}
+                     {!showTestResults && <button onClick={() => { if(userAnswers.includes(-1)) alert("Hamma savollarga javob bering!"); else { setShowTestResults(true); window.scrollTo({ top: 0, behavior: 'smooth' }); } }} className="w-full btn-blue py-6 rounded-[32px] font-black uppercase text-xl shadow-2xl">Tekshirish 🎯</button>}
                   </div>
                 )}
 
@@ -492,9 +510,6 @@ const App: React.FC = () => {
                   <div className="space-y-12 animate-in fade-in">
                      <div className="flex justify-between items-center flex-wrap gap-4 border-b pb-10">
                         <h2 className="text-3xl font-black">🗣️ Savol-Javoblar</h2>
-                        <button onClick={() => exportDOCX('QA')} className="bg-indigo-600 text-white px-8 py-3.5 rounded-full font-black text-xs uppercase shadow-xl hover:bg-indigo-700 transition-all flex items-center space-x-2">
-                          <span>🗣️</span><span>Word (.docx) yuklash</span>
-                        </button>
                      </div>
                      <div className="space-y-6">
                         {currentLesson.qa.map((item, i) => (
