@@ -1,15 +1,13 @@
 
 [build]
-  publish = "."
-  command = ""
+  publish = "dist"
+  command = "npm run build"
 
-# SPA (Single Page Application) yo'naltirishlarini sozlash
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
 
-# Browser xavfsizligi va kesh sozlamalari
 [[headers]]
   for = "/*"
   [headers.values]
@@ -17,6 +15,5 @@
     X-XSS-Protection = "1; mode=block"
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
-    # SharedArrayBuffer va boshqa zamonaviy APIlar uchun zarur
     Cross-Origin-Opener-Policy = "same-origin"
     Cross-Origin-Embedder-Policy = "require-corp"
